@@ -26,7 +26,7 @@ def berechne_monatliche_Annuitaet(kreditsumme, nominalzins_prozent, tilgungssatz
     tilgung = tilgungssatz_prozent / 100
     return round(kreditsumme * (zinssatz + tilgung) / 12, 2)
  
-def tilgungsplan_df(kreditsumme, nominalzins_prozent, tilgungssatz_prozent, sondert, wartezeit, monate):
+def tilgungsplan_df(kreditsumme, nominalzins_prozent, tilgungssatz_prozent, sondert, wartezeit):
     """ 
         Gibt DataFrame der monatlichen Tilgungen zurück
  
@@ -36,6 +36,7 @@ def tilgungsplan_df(kreditsumme, nominalzins_prozent, tilgungssatz_prozent, sond
     """
  
     df = pd.DataFrame()
+    df_jahr = pd.DataFrame()
     restschuld = kreditsumme # Am Anfang entspricht die Restschuld der Kreditsumme
     zinssatz = nominalzins_prozent / 100
     tilgung = tilgungssatz_prozent / 100
@@ -45,9 +46,6 @@ def tilgungsplan_df(kreditsumme, nominalzins_prozent, tilgungssatz_prozent, sond
     jahr = 0
     monat = 0
     while restschuld > 0:
-        Jahres_zins = 0
-        Jahres_tilgung = 0
-        Jahres_rate = 0
         jahr +=1
         for m in range(1,13):
             if restschuld == 0:
@@ -82,6 +80,7 @@ def tilgungsplan_df(kreditsumme, nominalzins_prozent, tilgungssatz_prozent, sond
             df = df.append({'Monat': monat, 'Jahr': jahr,'Anfangsschuld': anfangsschuld, 
             'Zinsen':zinsen, 'Tilgung': tilgung,'Restschuld': restschuld}, ignore_index=True) 
 
+          
     # Indikatorspalte, "1" wenn der Kredit noch nicht abbezahlt ist, sonst "0"
     df['Indikator'] = np.where(df['Anfangsschuld']>0, 1, 0)
     # Umsortieren der Spalten
@@ -94,44 +93,67 @@ def tilgungsplan_df(kreditsumme, nominalzins_prozent, tilgungssatz_prozent, sond
     # Monat als Index nutzen
     #df.set_index('Monat', inplace=True)
     return df
- 
-print(berechne_jaehrliche_Annuitaet(500000, 3.66, 2.0), 'jährliche Annuität')
-
-print(berechne_monatliche_Annuitaet(500000, 3.66, 2.0), 'Monatsrate')
- 
-tilgungsplan = tilgungsplan_df(500000, 3.66, 2, 0, 0, 200)
-print(tilgungsplan)
-#Wie lange läuft der Kredit
-print('Gesamtlaufzeit:', round(tilgungsplan['Indikator'].sum(),1), 'Monate')
-print('Gesamtlaufzeit:', round(tilgungsplan['Indikator'].sum()/12,1), 'Jahre')
 
 
+if __name__ == "__main__":
+    # Setze die Parameter fest für die Tilgungsplan
+    Kaufpreis = 500E3
+    Nebenkosten = Kaufpreis*0.10
+    Eigenkapital = Kaufpreis*0.20
+    kreditsumme = Kaufpreis+Nebenkosten-Eigenkapital
+    nominalzins_prozent= 3.36
+    tilgungssatz_prozent = 2.0
+    #Sollzinsbindung in Monaten
+    sollzinsbindung = 15*12
+
+    tilgungsplan = tilgungsplan_df(kreditsumme, nominalzins_prozent, tilgungssatz_prozent, 0, 0)
+    print(tilgungsplan)
+    print('#=========================================#')
+    print('Kaufpreis: %s EUR: Nebenkosten: %s EUR: Eigenkaptial: %s: EUR' % (Kaufpreis,Nebenkosten,Eigenkapital))
+    print('Kreditsumme: %s EUR: Sollzins: %s : Tilgungssatz: %s:'%(kreditsumme,nominalzins_prozent,tilgungssatz_prozent))
+    print(berechne_jaehrliche_Annuitaet(kreditsumme, nominalzins_prozent, tilgungssatz_prozent), 'jährliche Annuität')
+    print(berechne_monatliche_Annuitaet(kreditsumme, nominalzins_prozent, tilgungssatz_prozent), 'Monatsrate')
+    #Wie lange läuft der Kredit
+    Monats_laufzeit = round(tilgungsplan['Indikator'].sum(),1)
+    print('Gesamtlaufzeit:', Monats_laufzeit, 'Monate')
+    print('Gesamtlaufzeit:', round(Monats_laufzeit/12,1), 'Jahre')
+    print('#=========================================#')
+
+    
+    fig, ax = plt.subplots()
+
+    liste_monate = [int(m) for m in range(1,Monats_laufzeit+1)]
+    liste_monate_sollzinsbindung = [int(m) for m in range(1,sollzinsbindung)]
+    liste_monate_restlaufzeit = [int(m) for m in range(sollzinsbindung, Monats_laufzeit)]
+    liste_restschuld = [r for r in tilgungsplan['Restschuld']]
+
+    plt.xlim(1,liste_monate[-1])
+    plt.ylim(0,kreditsumme)
+    plt.xticks(fontsize=13)
+    plt.yticks(fontsize=13)
 
 
-fig, ax = plt.subplots()
-
-liste_monate = [int(m) for m in tilgungsplan['Monat']]
-liste_restschuld = [r for r in tilgungsplan['Restschuld']]
-
-plt.xlim(1,liste_monate[-1])
-plt.ylim(0,500000)
-plt.xticks(fontsize=13)
-plt.yticks(fontsize=13)
+    plt.tick_params(axis='both', which='major', labelsize=15,length=9,direction='in')
+    plt.tick_params(axis='both', which='minor', labelsize=9,length=5,direction='in')
 
 
-plt.tick_params(axis='both', which='major', labelsize=15,length=9,direction='in')
-plt.tick_params(axis='both', which='minor', labelsize=9,length=5,direction='in')
+    ax.xaxis.set_major_locator(ticker.MultipleLocator(24))
+    ax.xaxis.set_minor_locator(ticker.MultipleLocator(12))
+
+    ax.yaxis.set_major_locator(ticker.MultipleLocator(150000))
+    ax.yaxis.set_minor_locator(ticker.MultipleLocator(75000))
 
 
-ax.xaxis.set_major_locator(ticker.MultipleLocator(10))
-ax.xaxis.set_minor_locator(ticker.MultipleLocator(5))
 
-ax.yaxis.set_major_locator(ticker.MultipleLocator(100000))
-ax.yaxis.set_minor_locator(ticker.MultipleLocator(50000))
+    ax.fill_between(liste_monate_sollzinsbindung, liste_restschuld[0:liste_monate_sollzinsbindung[-1]],\
+                    0, alpha=0.3,color='green',label='Sollzinsbindung von 15 Jahren')
+    ax.fill_between(liste_monate_restlaufzeit, liste_restschuld[liste_monate_sollzinsbindung[-1]:-1],\
+                    0, alpha=0.3,color='orange',label='Gleichbleibende Sollzinsbindung')
 
 
-ax.plot(liste_monate, liste_restschuld)
-plt.xlabel('Jahre')
-plt.ylabel('Euro')
-plt.grid(True)
-plt.show()
+    plt.axvline(x=15*12,color='blue', lw=6, alpha=0.5, label='Ende der Sollzinsbindung')
+    plt.xlabel('Monate',fontsize=18)
+    plt.ylabel('Euro',fontsize=18)
+
+    ax.legend(shadow=True,fontsize=15)
+    plt.show()
