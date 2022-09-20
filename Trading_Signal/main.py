@@ -16,6 +16,7 @@ import seaborn
 
 
 
+
 #define the ticker symbol
 
 

@@ -29,21 +29,31 @@ def get_data(symbol_list, period = '1d', start_time='2000-1-1', end_time = date.
         for i in range(len(tickerData)):
 
             df_temp = df_temp.append({'date': tickerData['Date'][i],'stock': symbol,'value': tickerData['Close'][i]},ignore_index=True)
-    
-        #Signals
-        rsi= RSI(df_temp["value"], timeperiod=14)
-        rsi= rsi.fillna(0)
-        df_temp['RSI'] = rsi
+        
+        df_temp = get_signals(df_temp)
         
         df = pd.concat([df,df_temp],axis=0)
         #axis=0 is very important
     
     df.sort_values(by='date',inplace=True)
     df = df.reset_index()
-    print(df)
+    df = df.drop('index',axis=1)
+    #print(df)
     return df
 
 
+def get_signals(df):
+    rsi= RSI(df['value'], timeperiod=14)
+    ma_50 = MA(df['value'], timeperiod=50, matype=0)
+    ma_200 = MA(df['value'], timeperiod=200, matype=0)
+
+    df['RSI'] = rsi
+    df['MA_50'] = ma_50
+    df['MA_200'] = ma_200
+
+    df = df.fillna(0)
+    return df
+        
 
 # Load data
 today = date.today()
@@ -52,13 +62,17 @@ today = date.today()
 
 
 symbol_list = ['AAPL','AMD']
-df = get_data(symbol_list, start_time='2021-1-1', end_time = today)
+df = get_data(symbol_list, start_time='2015-1-1', end_time = today)
+signal_name = df.drop(['date','stock','value'], axis=1).columns
 
 
 
 # Initialise the app
 app = dash.Dash(external_stylesheets=[dbc.themes.DARKLY])
 app.config.suppress_callback_exceptions = True
+
+
+
 # Define the app
 
 
@@ -71,14 +85,14 @@ def get_options(list_stocks):
     return dict_list
 
 
+
 app.layout = html.Div(
-    children=[
-        html.Div(className='row',
+    children=[html.Div(className='row',
                  children=[
                     html.Div(className='four columns div-user-controls',
                              children=[
-                                 html.H2('DASH - STOCK PRICES'),
-                                 html.P('Visualising time series with Plotly - Dash.'),
+                                 html.H2('Stock market'),
+                                 html.P('Visualising of time series prototype.'),
                                  html.P('Pick one or more stocks from the dropdown below.'),
                                  html.Div(
                                      className='div-for-dropdown',
@@ -87,6 +101,11 @@ app.layout = html.Div(
                                                       multi=True, value=[df['stock'].sort_values()[0]],
                                                       style={'backgroundColor': '#1E1E1E'},
                                                       className='stockselector'
+                                                      ),
+                                         dcc.Dropdown(id='signalselector', options=get_options(signal_name),
+                                                      multi=True, value= signal_name,
+                                                      style={'backgroundColor': '#1E1E1E'},
+                                                      className='signalselector'
                                                       ),
                                      ],
                                      style={'color': '#1E1E1E'})
@@ -97,7 +116,7 @@ app.layout = html.Div(
                                  dcc.Graph(id='timeseries',
                                      config={'displayModeBar': True},
                                      animate=True),
-                                  dcc.Graph(id='signals',
+                                  dcc.Graph(id='signal',
                                      config={'displayModeBar': False},
                                      animate=True)
                              ])
@@ -150,20 +169,21 @@ def update_timeseries(selected_dropdown_value):
 
 
 
-@app.callback(Output('signals', 'figure'),
-              [Input('stockselector', 'value')])
-def update_signals(selected_dropdown_value):
-    ''' Draw traces of the feature 'change' based one the currently selected stocks '''
+@app.callback(Output('signal', 'figure'),
+              [Input('signalselector', 'value')])
+def update_signal(selected_dropdown_value):
     trace = []
     df_sub = df
     # Draw and append traces for each stock
-    for stock in selected_dropdown_value:
-        trace.append(go.Scatter(x=df_sub[df_sub['stock'] == stock]['date'],
-                                 y=df_sub[df_sub['stock'] == stock]['RSI'],
-                                 mode='lines',
-                                 opacity=0.7,
-                                 name=stock,
-                                 textposition='bottom center'))
+    print(selected_dropdown_value)
+
+    for signal in selected_dropdown_value:
+        trace.append(go.Scatter(x=df_sub[df_sub['stock'] == 'AAPL']['date'],
+                                y=df_sub[df_sub['stock'] == 'AAPL'][signal],
+                                mode='lines',
+                                opacity=0.7,
+                                name= signal,
+                                textposition='bottom center'))
     traces = [trace]
     data = [val for sublist in traces for val in sublist]
     # Define Figure
@@ -177,8 +197,7 @@ def update_signals(selected_dropdown_value):
                   height=250,
                   hovermode='x',
                   autosize=True,
-                  title={'text': '14 Period RSI', 'font': {'color': 'white'}, 'x': 0.5},
-                  yaxis={'showticklabels': False, 'range': [0, 100]},
+                  title={'text': 'Technical Analysis', 'font': {'color': 'white'}, 'x': 0.5},
               ),
               }
 
