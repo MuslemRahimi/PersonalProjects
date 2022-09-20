@@ -46,10 +46,13 @@ def get_signals(df):
     rsi= RSI(df['value'], timeperiod=14)
     ma_50 = MA(df['value'], timeperiod=50, matype=0)
     ma_200 = MA(df['value'], timeperiod=200, matype=0)
+    macd, macdsignal, _ = MACD(df['value'], fastperiod=12, slowperiod=26, signalperiod=9)
 
     df['RSI'] = rsi
     df['MA_50'] = ma_50
     df['MA_200'] = ma_200
+    df['MACD'] = macd
+    df['MACD_Signal'] = macdsignal
 
     df = df.fillna(0)
     return df
@@ -103,7 +106,7 @@ app.layout = html.Div(
                                                       className='stockselector'
                                                       ),
                                          dcc.Dropdown(id='signalselector', options=get_options(signal_name),
-                                                      multi=True, value= signal_name,
+                                                      multi=True, value= ['RSI'],
                                                       style={'backgroundColor': '#1E1E1E'},
                                                       className='signalselector'
                                                       ),
@@ -127,16 +130,16 @@ app.layout = html.Div(
 
 
 # Callback for timeseries price
-@app.callback(Output('timeseries', 'figure'),
-              [Input('stockselector', 'value')])
-def update_timeseries(selected_dropdown_value):
+@app.callback(Output(component_id='timeseries', component_property='figure'),
+              [Input(component_id='stockselector', component_property='value')])
+def update_timeseries(stockselector):
     ''' Draw traces of the feature 'value' based one the currently selected stocks '''
     # STEP 1
     trace = []
     df_sub = df
     # STEP 2
     # Draw and append traces for each stock
-    for stock in selected_dropdown_value:
+    for stock in stockselector:
         trace.append(go.Scatter(x=df_sub[df_sub['stock'] == stock]['date'],
                                  y=df_sub[df_sub['stock'] == stock]['value'],
                                  mode='lines',
@@ -170,20 +173,20 @@ def update_timeseries(selected_dropdown_value):
 
 
 @app.callback(Output('signal', 'figure'),
-              [Input('signalselector', 'value')])
-def update_signal(selected_dropdown_value):
+              Input('signalselector', 'value'),Input('stockselector', 'value'))
+def update_signal(signalselector, stockselector):
     trace = []
     df_sub = df
     # Draw and append traces for each stock
-    print(selected_dropdown_value)
-
-    for signal in selected_dropdown_value:
-        trace.append(go.Scatter(x=df_sub[df_sub['stock'] == 'AAPL']['date'],
-                                y=df_sub[df_sub['stock'] == 'AAPL'][signal],
-                                mode='lines',
-                                opacity=0.7,
-                                name= signal,
-                                textposition='bottom center'))
+    
+    for stock in stockselector:
+        for signal in signalselector:
+            trace.append(go.Scatter(x=df_sub[df_sub['stock'] == stock]['date'],
+                                    y=df_sub[df_sub['stock'] == stock][signal],
+                                    mode='lines',
+                                    opacity=0.7,
+                                    name= signal,
+                                    textposition='bottom center'))
     traces = [trace]
     data = [val for sublist in traces for val in sublist]
     # Define Figure
