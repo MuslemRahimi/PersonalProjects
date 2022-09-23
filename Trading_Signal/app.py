@@ -7,7 +7,6 @@ import dash_bootstrap_components as dbc
 import matplotlib.pyplot as plt
 import plotly.graph_objects as go
 from dash.dependencies import Input, Output
-from tqdm import tqdm
 
 import time
 import yfinance as yf
@@ -19,7 +18,7 @@ import csv
 
 def get_data(symbol_list, period = '1d', start_time='2000-1-1', end_time = date.today()):
     df = pd.DataFrame()
-    for symbol in tqdm(symbol_list):
+    for symbol in symbol_list:
         df_temp = pd.DataFrame()
 
         tickerData = yf.Ticker(symbol)
@@ -92,37 +91,41 @@ def get_options(list_stocks):
 app.layout = html.Div(
     children=[html.Div(className='row',
                  children=[
-                    html.Div(className='four columns div-user-controls',
-                             children=[
-                                 html.H2('Stock market'),
-                                 html.P('Visualising of time series prototype.'),
-                                 html.P('Pick one or more stocks from the dropdown below.'),
-                                 html.Div(
-                                     className='div-for-dropdown',
-                                     children=[
-                                         dcc.Dropdown(id='stockselector', options=get_options(df['stock'].unique()),
-                                                      multi=True, value=[df['stock'].sort_values()[0]],
-                                                      style={'backgroundColor': '#1E1E1E'},
-                                                      className='stockselector'
-                                                      ),
-                                         dcc.Dropdown(id='signalselector', options=get_options(signal_name),
-                                                      multi=True, value= ['RSI'],
-                                                      style={'backgroundColor': '#1E1E1E'},
-                                                      className='signalselector'
-                                                      ),
-                                     ],
-                                     style={'color': '#1E1E1E'})
-                                ]
-                             ),
+                    dbc.Row(
+                        [
+                        dbc.Col(html.Div("Choose Stock"), width= 2),
+                        dbc.Col(html.Div("Indicator"), width= 2)
+                        ]
+                        ),
+                    
+                    dbc.Row(
+                        [
+                        dbc.Col(dcc.Dropdown(id='stockselector', options=get_options(df['stock'].unique()),
+                                        multi=True, value=[df['stock'].sort_values()[0]],
+                                        style={'backgroundColor': '#1E1E1E'},
+                                        className='stockselector'), style={'color': '#1E1E1E'}, width=2),
+                        dbc.Col(dcc.Dropdown(id='signalselector', options=get_options(signal_name),
+                                        multi=True, value= ['RSI'],
+                                        style={'backgroundColor': '#1E1E1E'},
+                                        className='signalselector'),style={'color': '#1E1E1E'}, width = 2)
+                        ]
+                        ),
+
+                    dbc.Row(
+                        dbc.Col(dcc.Graph(id='timeseries',
+                                     config={'displayModeBar': False},
+                                     animate=True), width= 4)
+                        ),
+
                     html.Div(className='eight columns div-for-charts bg-grey',
                              children=[
-                                 dcc.Graph(id='timeseries',
-                                     config={'displayModeBar': True},
-                                     animate=True),
-                                  dcc.Graph(id='signal',
+                                 dcc.Graph(id='signal',
                                      config={'displayModeBar': False},
                                      animate=True)
                              ])
+
+
+
                               ])
         ]
 
@@ -153,7 +156,7 @@ def update_timeseries(stockselector):
     # STEP 4
     figure = {'data': data,
               'layout': go.Layout(
-                  colorway=["#5E0DAC", '#FF4F00', '#375CB1', '#FF7400', '#FFF400', '#FF0056'],
+                  colorway=['#FF4F00', "#5E0DAC", '#375CB1', '#FF7400', '#FFF400', '#FF0056'],
                   template='plotly_dark',
                   paper_bgcolor='rgba(0, 0, 0, 0)',
                   plot_bgcolor='rgba(0, 0, 0, 0)',
@@ -192,7 +195,7 @@ def update_signal(signalselector, stockselector):
     # Define Figure
     figure = {'data': data,
               'layout': go.Layout(
-                  colorway=["#5E0DAC", '#FF4F00', '#375CB1', '#FF7400', '#FFF400', '#FF0056'],
+                  colorway=['#FF4F00', "#5E0DAC", '#375CB1', '#FF7400', '#FFF400', '#FF0056'],
                   template='plotly_dark',
                   paper_bgcolor='rgba(0, 0, 0, 0)',
                   plot_bgcolor='rgba(0, 0, 0, 0)',
