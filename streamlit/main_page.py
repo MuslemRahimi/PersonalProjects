@@ -113,29 +113,3 @@ with col_pred:
 
 fig = plot_data(data,selected_indicator, forecast,period)
 st.plotly_chart(fig)
-
-
-
-col5, _ = st.columns(2)
-with col5:
-	#Forecast the future
-
-	# Predict forecast with Prophet.
-	df_train = data[['Date','Close']]
-	df_train = df_train.rename(columns={"Date": "ds", "Close": "y"})
-
-	m = Prophet()
-	m.fit(df_train)
-	future = m.make_future_dataframe(periods=period)
-	forecast = m.predict(future)
-
-
-
-	# Show and plot forecast
-	#fig = plot_data(data)
-	#st.plotly_chart(fig)
-
-	st.write(f'Forecast plot for {n_years} years')
-	fig1 = plot_plotly(m, forecast)
-	st.plotly_chart(fig1)
-
